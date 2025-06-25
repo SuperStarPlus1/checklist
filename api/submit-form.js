@@ -28,17 +28,29 @@ export default async function handler(req, res) {
     const dateStr = new Date().toISOString().split('T')[0];
     const folderPath = `/FORMS/${dateStr}`;
 
-    // 1. צור תיקיה בדרופבוקס
-    await dropboxCreateFolder(folderPath);
+    await fetch('https://api.dropboxapi.com/2/files/create_folder_v2', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DROPBOX_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ path: folderPath, autorename: true })
+    });
 
-    // 2. העלאת תמונות
     const images = Array.isArray(files.imageUpload) ? files.imageUpload : [files.imageUpload];
     for (const file of images) {
       const data = await fs.readFile(file.filepath);
-      await dropboxUpload(`${folderPath}/${file.originalFilename}`, data);
+      await fetch('https://content.dropboxapi.com/2/files/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${DROPBOX_TOKEN}`,
+          'Dropbox-API-Arg': JSON.stringify({ path: `${folderPath}/${file.originalFilename}`, mode: 'add', autorename: true }),
+          'Content-Type': 'application/octet-stream'
+        },
+        body: data
+      });
     }
 
-    // 3. יצירת דוח HTML
     const reportHtml = `
       <html><body>
       <h1>רשימת תיוג ליום ${dateStr}</h1>
@@ -46,47 +58,27 @@ export default async function handler(req, res) {
       <p>סעיף ראשון: ${section1}</p>
       <p>סעיף שני: ${section2}</p>
       </body></html>`;
-    await dropboxUpload(`${folderPath}/report.html`, Buffer.from(reportHtml, 'utf8'));
 
-    // 4. יצירת קישור שיתוף
-    const sharedLink = await dropboxCreateShareLink(`${folderPath}/report.html`);
+    await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DROPBOX_TOKEN}`,
+        'Dropbox-API-Arg': JSON.stringify({ path: `${folderPath}/report.html`, mode: 'add', autorename: true }),
+        'Content-Type': 'application/octet-stream'
+      },
+      body: Buffer.from(reportHtml, 'utf8')
+    });
 
-    res.status(200).json({ sharedLink });
+    const shareRes = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DROPBOX_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ path: `${folderPath}/report.html` })
+    });
+
+    const shareData = await shareRes.json();
+    res.status(200).json({ sharedLink: shareData.url });
   });
-}
-
-async function dropboxCreateFolder(path) {
-  await fetch('https://api.dropboxapi.com/2/files/create_folder_v2', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${DROPBOX_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ path, autorename: true })
-  });
-}
-
-async function dropboxUpload(path, content) {
-  await fetch('https://content.dropboxapi.com/2/files/upload', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${DROPBOX_TOKEN}`,
-      'Dropbox-API-Arg': JSON.stringify({ path, mode: 'add', autorename: true }),
-      'Content-Type': 'application/octet-stream'
-    },
-    body: content
-  });
-}
-
-async function dropboxCreateShareLink(path) {
-  const res = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${DROPBOX_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ path })
-  });
-  const data = await res.json();
-  return data.url;
 }
