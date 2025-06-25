@@ -7,23 +7,31 @@
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f0f2f5; direction: rtl; }
     header { text-align: center; margin-bottom: 20px; }
-    header img { width: 150px; margin-bottom: 10px; }
-    header h2 { font-size: 28px; color: #333; }
-    .section { background: white; margin-bottom: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .add-image-btn { background: #2196f3; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; margin-top: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; }
+    header img { width: 150px; margin-bottom: 10px; animation: fadeIn 1s ease; }
+    header h2 { font-size: 28px; color: #333; animation: fadeIn 1s ease; }
+    .section { background: white; margin-bottom: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.1); animation: slideUp 0.5s ease; }
+    .add-image-btn { background: #2196f3; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; margin-top: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; transition: transform 0.2s; }
+    .add-image-btn:hover { transform: scale(1.1); }
     .add-image-btn img { width: 30px; height: 30px; filter: invert(100%); }
-    .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
-    #progressOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+    .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8); transition: opacity 0.5s, transform 0.5s; }
+    .preview-img.loaded { opacity: 1; transform: scale(1); }
+    #progressOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; opacity: 0; transform: scale(0.8); transition: opacity 0.5s, transform 0.5s; }
+    #progressOverlay.active { opacity: 1; transform: scale(1); }
     #progressContainer { background: #2196f3; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; width: 90%; max-width: 400px; }
     #progressContainer img.logo { width: 100px; margin-bottom: 20px; }
     #progressText { font-size: 24px; color: white; margin-bottom: 20px; }
     #progressBarContainer { width: 100%; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; margin: auto; }
-    #progressBar { width: 0%; height: 100%; background: #ffeb3b; transition: width 0.3s; }
-    #whatsappInsideBtn { margin-top: 20px; background: #25d366; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.3); cursor: pointer; display: none; }
+    #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffeb3b, #ffc107); transition: width 0.5s ease-in-out; }
+    #whatsappInsideBtn { margin-top: 20px; background: #25d366; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.3); cursor: pointer; transform: translateY(50px); opacity: 0; transition: all 0.5s; }
+    #whatsappInsideBtn.show { transform: translateY(0); opacity: 1; }
+
+    @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+    @keyframes slideUp { from {opacity: 0; transform: translateY(20px);} to {opacity: 1; transform: translateY(0);} }
   </style>
 </head>
 <body>
-  <div id="progressOverlay" style="display:none;">
+
+  <div id="progressOverlay">
     <div id="progressContainer">
       <img src="logo.png" class="logo" alt="Logo">
       <div id="progressText">מתחיל...</div>
@@ -124,6 +132,7 @@
             img.src = reader.result;
             img.className = "preview-img";
             document.getElementById(`imgContainer${idx}`).appendChild(img);
+            img.onload = () => img.classList.add('loaded');
             document.getElementById(`item${idx}`).checked = true;
           };
           reader.readAsDataURL(file);
@@ -133,7 +142,7 @@
     }
 
     function showProgress(stage, percent) {
-      document.getElementById("progressOverlay").style.display = 'flex';
+      document.getElementById("progressOverlay").classList.add('active');
       document.getElementById("progressText").textContent = stage;
       document.getElementById("progressBar").style.width = percent + "%";
     }
@@ -159,14 +168,15 @@
       if (reportRes.ok) {
         const { link } = await reportRes.json();
         showProgress("הושלם!", 100);
-        document.getElementById("whatsappInsideBtn").style.display = 'block';
-        document.getElementById("whatsappInsideBtn").onclick = () => {
+        const btn = document.getElementById("whatsappInsideBtn");
+        btn.classList.add('show');
+        btn.onclick = () => {
           const text = `נוצר דוח חדש:\n${link}`;
           window.open(`https://api.whatsapp.com/send?phone=972549090028&text=${encodeURIComponent(text)}`, '_blank');
-          document.getElementById("progressOverlay").style.display = 'none';
+          document.getElementById("progressOverlay").classList.remove('active');
         };
       } else {
-        document.getElementById("progressOverlay").style.display = 'none';
+        document.getElementById("progressOverlay").classList.remove('active');
         alert("שגיאה ביצירת הדוח.");
       }
     });
