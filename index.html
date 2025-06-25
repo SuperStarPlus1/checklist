@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>משימות סגירת סניף</title>
+  <title>משימות סגירת סניף - גרסה מלאה</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f0f2f5; direction: rtl; }
     header { text-align: center; margin-bottom: 20px; }
@@ -15,74 +15,112 @@
     .add-image-btn img { width: 30px; height: 30px; filter: invert(100%); }
     .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8); transition: opacity 0.5s, transform 0.5s; }
     .preview-img.loaded { opacity: 1; transform: scale(1); }
-    #progressOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; opacity: 0; transform: scale(0.8); transition: opacity 0.5s, transform 0.5s; }
-    #progressOverlay.active { opacity: 1; transform: scale(1); }
-    #progressContainer { background: #2196f3; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; width: 90%; max-width: 400px; }
-    #progressContainer img.logo { width: 100px; margin-bottom: 20px; }
-    #progressText { font-size: 24px; color: white; margin-bottom: 20px; }
-    #progressBarContainer { width: 100%; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; margin: auto; }
-    #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffeb3b, #ffc107); transition: width 0.5s ease-in-out; }
-    #whatsappInsideBtn { margin-top: 20px; background: #25d366; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.3); cursor: pointer; transform: translateY(50px); opacity: 0; transition: all 0.5s; }
-    #whatsappInsideBtn.show { transform: translateY(0); opacity: 1; }
-    #taskCounter { position: fixed; top: 20px; left: 20px; background: #2196f3; color: white; padding: 10px 20px; border-radius: 50px; font-size: 16px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 1000; }
-    #progressAnimation { margin: 20px auto; width: 200px; height: 200px; }
-    #confetti { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
-
-    @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
-    @keyframes slideUp { from {opacity: 0; transform: translateY(20px);} to {opacity: 1; transform: translateY(0);} }
   </style>
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </head>
 <body>
-
-  <div id="taskCounter">משימות שנותרו: 0</div>
-  <canvas id="confetti"></canvas>
-
-  <div id="progressOverlay">
-    <div id="progressContainer">
-      <img src="logo.png" class="logo" alt="Logo">
-      <div id="progressText">מתחיל...</div>
-      <div id="progressAnimation">
-        <lottie-player id="lottieUpload" src="https://lottie.host/97c2dc2e-6ffd-43a0-949f-30bae814b26b/4uJ8Pki0Zx.json" background="transparent" speed="1" loop autoplay></lottie-player>
-      </div>
-      <div id="progressBarContainer"><div id="progressBar"></div></div>
-      <button id="whatsappInsideBtn">📤 שלח את הדוח בוואטסאפ</button>
-    </div>
-  </div>
-
   <header>
     <img src="logo.png" alt="Logo">
     <h2>משימות סגירת סניף</h2>
   </header>
-
   <form id="checkForm">
     <div class="section">
       <label>תאריך ושעה:</label>
       <input type="text" id="dateTime" readonly>
     </div>
-
     <div class="section">
       <label>שם עובד:</label>
       <input type="text" id="employeeName" required>
     </div>
-
     <div id="checklist"></div>
     <button type="submit" style="margin-top:20px; padding: 10px 30px; font-size: 18px; background-color:#2196f3; color:white; border:none; border-radius:8px;">שלח טופס בקרה</button>
   </form>
-
   <script>
-    // כל הקוד נשאר זהה, אין שינוי בלוגיקה אלא רק בתצוגה
+    const items = [
+      { text: "לוודא שכל הקרטונים בדחסן", requireImage: true },
+      { text: "להוציא עגלות מהמחסן", requireImage: false },
+      { text: "לוודא עם עובד מחלקת ירקות חיבור מלגזה לטעינה", requireImage: true },
+      { text: "סגירת דלת מחסן מזרחית", requireImage: false },
+      { text: "כיבוי אורות ממ\"ד", requireImage: false },
+      { text: "חיבור מכונת שטיפה לחשמל", requireImage: true },
+      { text: "כיבוי אור שירותים", requireImage: false },
+      { text: "כיבוי אורות מקררים", requireImage: false },
+      { text: "צילום טמפרוטורת של מקררי חלב", requireImage: true },
+      { text: "סגירת דלת מחסן אמצעית", requireImage: false },
+      { text: "צילום טמפרטורטת של מקפיא עומד", requireImage: true },
+      { text: "מעבר בין המדפים לוודא שאין חריגים ולוודא ניקיון מעברים", requireImage: false },
+      { text: "סגירת דלת מחסן אחורית (ליד המקרר)", requireImage: false },
+      { text: "לוודא שכל המקררי גיבוי ומקפאים סגורים", requireImage: true },
+      { text: "צילום טמפרטורות של מקררי גיבוי", requireImage: true },
+      { text: "לוודא שאין עגלות בתוך הסופר", requireImage: false },
+      { text: "פינוי פחים כולל פח קופה ראשית", requireImage: false },
+      { text: "כיבוי אורות מחלקת שתייה וחומרי ניקוי", requireImage: false },
+      { text: "כיבוי מזגנים בחלק האחורי", requireImage: true },
+      { text: "צילום מדף לחם ושליחה לאשרף", requireImage: true },
+      { text: "להוציא עגלת חזרות לחם", requireImage: true },
+      { text: "לוודא נעילת שער חצר ארגזים", requireImage: false },
+      { text: "לוודא שאין עגלות שלא במקומם", requireImage: false },
+      { text: "כיבוי מזגנים", requireImage: true },
+      { text: "כיבוי אורות כניסה והדלקת תאורת לילה", requireImage: false },
+      { text: "כיבוי אורות ראשי", requireImage: false },
+      { text: "לוודא שאין הפרעה לתריס הראשי. לסגור את התריס ולוודא שנסגר עד הסוף", requireImage: true }
+    ];
+    const now = new Date();
+    document.getElementById("dateTime").value = now.toLocaleString();
+    const checklistDiv = document.getElementById("checklist");
+    const images = {};
 
-    function triggerConfetti() {
-      confetti({
-        particleCount: 200,
-        spread: 90,
-        origin: { y: 0.6 }
-      });
+    items.forEach((item, idx) => {
+      const section = document.createElement("div");
+      section.className = "section";
+      section.innerHTML = `<label><input type="checkbox" id="item${idx}"> ${item.text}</label>`;
+      if (item.requireImage) {
+        const imgContainer = document.createElement("div");
+        imgContainer.id = `imgContainer${idx}`;
+        section.appendChild(imgContainer);
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.className = "add-image-btn";
+        addBtn.innerHTML = "📷";
+        addBtn.onclick = () => addImage(idx);
+        section.appendChild(addBtn);
+        images[idx] = [];
+      }
+      checklistDiv.appendChild(section);
+    });
+
+    function addImage(idx) {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.capture = "environment";
+      input.onchange = e => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            images[idx].push(reader.result);
+            const img = document.createElement("img");
+            img.src = reader.result;
+            img.className = "preview-img loaded";
+            document.getElementById(`imgContainer${idx}`).appendChild(img);
+            document.getElementById(`item${idx}`).checked = true;
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
     }
 
-    document.getElementById("whatsappInsideBtn").addEventListener("click", triggerConfetti);
+    document.getElementById("checkForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].requireImage && (!images[i] || images[i].length === 0)) {
+          alert(`נדרש לצרף לפחות תמונה אחת עבור: ${items[i].text}`);
+          return;
+        }
+      }
+      alert("הטופס נשלח בהצלחה!");
+    });
   </script>
 </body>
 </html>
