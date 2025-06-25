@@ -25,37 +25,23 @@ async function getDropboxAccessToken() {
   return data.access_token;
 }
 
-async function createSharedLink(DROPBOX_TOKEN, path) {
-  const res = await fetch("https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings", {
+// פונקציה לקרוא תמונה מדרופבוקס ולהחזיר אותה כ־Base64
+async function downloadFileAsBase64(DROPBOX_TOKEN, path) {
+  const res = await fetch("https://content.dropboxapi.com/2/files/download", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${DROPBOX_TOKEN}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ path })
+      "Dropbox-API-Arg": JSON.stringify({ path })
+    }
   });
 
-  if (res.ok) {
-    const data = await res.json();
-    return data.url.replace("?dl=0", "?raw=1");  // הפיכה ל־direct link
-  } else {
-    // יתכן שכבר יש לינק קיים -> נשתמש בו
-    const existing = await fetch("https://api.dropboxapi.com/2/sharing/list_shared_links", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${DROPBOX_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ path })
-    });
-
-    const existingData = await existing.json();
-    if (existingData.links && existingData.links.length > 0) {
-      return existingData.links[0].url.replace("?dl=0", "?raw=1");
-    } else {
-      throw new Error("Cannot create or retrieve shared link for " + path);
-    }
+  if (!res.ok) {
+    throw new Error("Cannot download file: " + path);
   }
+
+  const arrayBuffer = await res.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return buffer.toString('base64');
 }
 
 export default async function handler(req, res) {
@@ -89,8 +75,8 @@ export default async function handler(req, res) {
       html += `<tr><td colspan="2">`;
       for (const img of item.images) {
         const imagePath = `${basePath}/${img}`;
-        const imageLink = await createSharedLink(DROPBOX_TOKEN, imagePath);
-        html += `<a href="${imageLink}" target="_blank"><img src="${imageLink}"></a>`;
+        const base64Image = await downloadFileAsBase64(DROPBOX_TOKEN, imagePath);
+        html += `<img src="data:image/jpeg;base64,${base64Image}">`;
       }
       html += `</td></tr>`;
     }
@@ -113,8 +99,18 @@ export default async function handler(req, res) {
     body: Buffer.from(html, 'utf8')
   });
 
-  // גם לקובץ הדוח עצמו נייצר קישור שיתוף
-  const reportSharedLink = await createSharedLink(DROPBOX_TOKEN, `${basePath}/report.html`);
+  // יוצר לינק שיתוף לדוח עצמו
+  const shareResp = await fetch("https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${DROPBOX_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ path: `${basePath}/report.html` })
+  });
 
-  res.status(200).json({ link: reportSharedLink });
+  const shareData = await shareResp.json();
+  const finalLink = shareData.url.replace("?dl=0", "?raw=1");
+
+  res.status(200).json({ link: finalLink });
 }
