@@ -1,5 +1,11 @@
-export const config = { runtime: "nodejs" };
+import busboy from 'busboy';
+import { promises as fs } from 'fs';
+import os from 'os';
+import path from 'path';
 
+export const config = { api: { bodyParser: false } };
+
+// פונקציה לקבלת גישה ל-Dropbox (עם Refresh Token)
 async function getDropboxAccessToken() {
   const params = new URLSearchParams();
   params.append('grant_type', 'refresh_token');
@@ -26,19 +32,36 @@ async function getDropboxAccessToken() {
   return data.access_token;
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+// פונקציית עזר לקרוא גוף JSON
+async function readJsonBody(req) {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(chunk);
   }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
 
-  const { folderName, fileName, fileData } = req.body;
-  const basePath = `/forms/${folderName}`;
+export default async function handler(req, res) {
+  if (req.method === 'POST' && req.headers['content-type'].startsWith('application/json')) {
+    // שלב יצירת תיקיה
+    const body = await readJsonBody(req);
+    const folderName = body.folderName;
+    const basePath = `/forms/${folderName}`;
 
-  try {
     const DROPBOX_TOKEN = await getDropboxAccessToken();
 
-    if (!fileName && !fileData) {
-      const checkResp = await fetch("https://api.dropboxapi.com/2/files/get_metadata", {
+    // אם קיימת תיקיה ישנה - מחק
+    const checkResp = await fetch("https://api.dropboxapi.com/2/files/get_metadata", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${DROPBOX_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ path: basePath })
+    });
+
+    if (checkResp.ok) {
+      await fetch("https://api.dropboxapi.com/2/files/delete_v2", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${DROPBOX_TOKEN}`,
@@ -46,63 +69,71 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({ path: basePath })
       });
-
-      if (checkResp.ok) {
-        await fetch("https://api.dropboxapi.com/2/files/delete_v2", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${DROPBOX_TOKEN}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ path: basePath })
-        });
-      }
-
-      const createResp = await fetch("https://api.dropboxapi.com/2/files/create_folder_v2", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${DROPBOX_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ path: basePath, autorename: false })
-      });
-
-      if (!createResp.ok) {
-        const error = await createResp.text();
-        return res.status(500).json({ error });
-      }
-
-      return res.status(200).json({ message: "Folder prepared" });
     }
 
-    if (!fileName || !fileData) {
-      return res.status(400).json({ error: 'Missing file name or file data' });
-    }
-
-    const uploadResp = await fetch("https://content.dropboxapi.com/2/files/upload", {
+    // צור תיקיה חדשה
+    await fetch("https://api.dropboxapi.com/2/files/create_folder_v2", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${DROPBOX_TOKEN}`,
-        "Content-Type": "application/octet-stream",
-        "Dropbox-API-Arg": JSON.stringify({
-          path: `${basePath}/${fileName}`,
-          mode: "overwrite",
-          autorename: false,
-          mute: false
-        })
+        "Content-Type": "application/json"
       },
-      body: Buffer.from(fileData, 'base64')
+      body: JSON.stringify({ path: basePath, autorename: false })
     });
 
-    if (!uploadResp.ok) {
-      const error = await uploadResp.text();
-      return res.status(500).json({ error });
-    }
+    return res.status(200).json({ message: "Folder created" });
+  }
 
-    return res.status(200).json({ message: "File uploaded" });
+  if (req.method === 'POST') {
+    // שלב העלאת קובץ
+    const bb = busboy({ headers: req.headers });
+    let folderName = '';
+    let fileName = '';
+    let filePath = '';
 
-  } catch (err) {
-    console.error("Upload API Error:", err);
-    return res.status(500).json({ error: err.message });
+    bb.on('field', (name, value) => {
+      if (name === 'folderName') folderName = value;
+      if (name === 'fileName') fileName = value;
+    });
+
+    bb.on('file', (name, file, info) => {
+      const tmpPath = path.join(os.tmpdir(), info.filename);
+      filePath = tmpPath;
+      file.pipe(fs.createWriteStream(tmpPath));
+    });
+
+    bb.on('close', async () => {
+      try {
+        const DROPBOX_TOKEN = await getDropboxAccessToken();
+        const content = await fs.readFile(filePath);
+        const basePath = `/forms/${folderName}`;
+
+        await fetch("https://content.dropboxapi.com/2/files/upload", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${DROPBOX_TOKEN}`,
+            "Content-Type": "application/octet-stream",
+            "Dropbox-API-Arg": JSON.stringify({
+              path: `${basePath}/${fileName}`,
+              mode: "overwrite",
+              autorename: false,
+              mute: false
+            })
+          },
+          body: content
+        });
+
+        await fs.unlink(filePath);
+        res.status(200).json({ message: "File uploaded" });
+
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+      }
+    });
+
+    req.pipe(bb);
+  } else {
+    res.status(405).json({ error: 'Method Not Allowed' });
   }
 }
