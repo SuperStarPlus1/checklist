@@ -25,7 +25,6 @@ async function getDropboxAccessToken() {
   return data.access_token;
 }
 
-// פונקציה לקרוא תמונה מדרופבוקס ולהחזיר אותה כ־Base64
 async function downloadFileAsBase64(DROPBOX_TOKEN, path) {
   const res = await fetch("https://content.dropboxapi.com/2/files/download", {
     method: "POST",
@@ -55,6 +54,9 @@ export default async function handler(req, res) {
   const DROPBOX_TOKEN = await getDropboxAccessToken();
   const basePath = `/forms/${folderName}`;
 
+  // נביא את הלוגו פעם אחת בתחילת בניית הדוח
+  const logoBase64 = await downloadFileAsBase64(DROPBOX_TOKEN, `/forms/logo.png`);
+
   let html = `
   <html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>דוח</title>
   <style>
@@ -63,8 +65,10 @@ export default async function handler(req, res) {
     th, td { border: 1px solid #aaa; padding: 10px; text-align: center; }
     .done { color: green; font-weight: bold; }
     .fail { color: red; font-weight: bold; }
-    img { width:150px; margin:5px; }
+    img.logo { width: 150px; margin-top: 20px; }
+    img.photo { width:150px; margin:5px; border: 1px solid #ccc; }
   </style></head><body>
+  <img src="data:image/png;base64,${logoBase64}" class="logo">
   <h2>דוח סגירת סניף</h2>
   <p><b>שם עובד:</b> ${employeeName}</p>
   <table><tr><th>סטטוס</th><th>סעיף</th></tr>`;
@@ -76,7 +80,7 @@ export default async function handler(req, res) {
       for (const img of item.images) {
         const imagePath = `${basePath}/${img}`;
         const base64Image = await downloadFileAsBase64(DROPBOX_TOKEN, imagePath);
-        html += `<img src="data:image/jpeg;base64,${base64Image}">`;
+        html += `<img src="data:image/jpeg;base64,${base64Image}" class="photo">`;
       }
       html += `</td></tr>`;
     }
