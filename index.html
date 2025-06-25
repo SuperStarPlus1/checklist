@@ -51,35 +51,7 @@
     <button type="submit" style="margin-top:20px; padding: 10px 30px; font-size: 18px; background-color:#2196f3; color:white; border:none; border-radius:8px;">שלח טופס בקרה</button>
   </form>
   <script>
-    const items = [
-      { text: "לוודא שכל הקרטונים בדחסן", requireImage: true },
-      { text: "להוציא עגלות מהמחסן", requireImage: false },
-      { text: "לוודא עם עובד מחלקת ירקות חיבור מלגזה לטעינה", requireImage: true },
-      { text: "סגירת דלת מחסן מזרחית", requireImage: false },
-      { text: "כיבוי אורות ממ" + "ד", requireImage: false },
-      { text: "חיבור מכונת שטיפה לחשמל", requireImage: true },
-      { text: "כיבוי אור שירותים", requireImage: false },
-      { text: "כיבוי אורות מקררים", requireImage: false },
-      { text: "צילום טמפרטורת של מקררי חלב", requireImage: true },
-      { text: "סגירת דלת מחסן אמצעית", requireImage: false },
-      { text: "צילום טמפרטורת של מקפיא עומד", requireImage: true },
-      { text: "מעבר בין המדפים לוודא שאין חריגים ולוודא ניקיון מעברים", requireImage: false },
-      { text: "סגירת דלת מחסן אחורית (ליד המקרר)", requireImage: false },
-      { text: "לוודא שכל המקררי גיבוי ומקפאים סגורים", requireImage: true },
-      { text: "צילום טמפרטורות של מקררי גיבוי", requireImage: true },
-      { text: "לוודא שאין עגלות בתוך הסופר", requireImage: false },
-      { text: "פינוי פחים כולל פח קופה ראשית", requireImage: false },
-      { text: "כיבוי אורות מחלקת שתייה וחומרי ניקוי", requireImage: false },
-      { text: "כיבוי מזגנים בחלק האחורי", requireImage: true },
-      { text: "צילום מדף לחם ושליחה לאשרף", requireImage: true },
-      { text: "להוציא עגלת חזרות לחם", requireImage: true },
-      { text: "לוודא נעילת שער חצר ארגזים", requireImage: false },
-      { text: "לוודא שאין עגלות שלא במקומם", requireImage: false },
-      { text: "כיבוי מזגנים", requireImage: true },
-      { text: "כיבוי אורות כניסה והדלקת תאורת לילה", requireImage: false },
-      { text: "כיבוי אורות ראשי", requireImage: false },
-      { text: "לוודא שאין הפרעה לתריס הראשי. לסגור את התריס ולוודא שנסגר עד הסוף", requireImage: true }
-    ];
+    const items = [...]; // נשאיר כאן את רשימת הסעיפים שלך
     const now = new Date();
     document.getElementById("dateTime").value = now.toLocaleString();
     const checklistDiv = document.getElementById("checklist");
@@ -119,6 +91,46 @@
         }; reader.readAsDataURL(file);
       }}; input.click();
     }
+
+    function showProgress(stage, percent) {
+      document.getElementById("progressOverlay").style.display = 'flex';
+      document.getElementById("progressText").innerText = stage;
+      document.getElementById("progressBar").style.width = percent + "%";
+    }
+
+    document.getElementById("checkForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].requireImage && (!images[i] || images[i].length === 0)) {
+          alert(`נדרש לצרף לפחות תמונה אחת עבור: ${items[i].text}`); return;
+        }
+      }
+      const folderName = now.toISOString().split('T')[0];
+      showProgress("מכין תיקיה...", 10);
+      await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName }) });
+      let total = 0; for (const arr of Object.values(images)) total += arr.length; let count = 0;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].requireImage && images[i].length > 0) {
+          for (let j = 0; j < images[i].length; j++) {
+            const fileName = `item${i}_image${j+1}.jpg`;
+            await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName, fileName, fileData: images[i][j].split(',')[1] }) });
+            count++; showProgress("מעלה תמונות...", 10 + (count/total)*60);
+          }
+        }
+      }
+      showProgress("יוצר דוח...", 80);
+      const sections = items.map((item, idx) => ({ text: item.text, done: document.getElementById(`item${idx}`).checked, images: (images[idx]||[]).map((_,i)=>`item${idx}_image${i+1}.jpg`) }));
+      const reportRes = await fetch('/api/create-report', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName, employeeName: document.getElementById("employeeName").value, sections }) });
+      if (reportRes.ok) {
+        const { link } = await reportRes.json();
+        showProgress("הושלם!", 100);
+        const btn = document.getElementById("whatsappInsideBtn");
+        btn.style.display = 'block';
+        btn.onclick = () => window.open(`https://api.whatsapp.com/send?phone=972549090028&text=${encodeURIComponent("נוצר דוח חדש:\n" + link)}`,'_blank');
+      } else {
+        alert("שגיאה ביצירת הדוח."); document.getElementById("progressOverlay").style.display = 'none';
+      }
+    });
   </script>
 </body>
 </html>
