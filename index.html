@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>סגירת סניף</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f0f0f0; direction: rtl; }
+    header { text-align: center; margin-bottom: 20px; }
+    img.logo { width: 120px; }
+    .section { background: #fff; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
+    .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; }
+    #progressOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999; display: none; }
+    #whatsappBtn { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #25d366; color: white; font-size: 20px; padding: 20px 40px; border: none; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" alt="Logo" class="logo">
+  <h2>משימות סגירת סניף</h2>
+</header>
+
+<form id="form">
+  <div class="section">
+    <label>תאריך:</label>
+    <input type="text" id="dateTime" readonly>
+  </div>
+
+  <div class="section">
+    <label>שם עובד:</label>
+    <input type="text" id="employeeName" required>
+  </div>
+
+  <div id="checklist"></div>
+
+  <button type="submit">שלח</button>
+</form>
+
+<div id="progressOverlay">
+  <div>
+    <div id="progressText" style="font-size:20px;">מתחיל...</div>
+  </div>
+</div>
+
+<button id="whatsappBtn">📤 שלח לוואטסאפ</button>
+
+<script>
+  const items = [
+    { text: "לוודא שכל הקרטונים בדחסן", requireImage: true },
+    { text: "להוציא עגלות מהמחסן", requireImage: false },
+    { text: "חיבור מלגזה לטעינה", requireImage: true },
+    { text: "סגירת דלת מחסן מזרחית", requireImage: false }
+    // (שים כאן את כל הרשימה המלאה שלך)
+  ];
+
+  const now = new Date();
+  document.getElementById('dateTime').value = now.toISOString().split('T')[0];
+
+  const checklist = document.getElementById('checklist');
+  const images = {};
+  items.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'section';
+    div.innerHTML = `<label><input type="checkbox" id="item${idx}"> ${item.text}</label>`;
+    if(item.requireImage){
+      div.innerHTML += `<div id="img${idx}"></div><button type="button" onclick="addImage(${idx})">הוסף תמונה</button>`;
+      images[idx] = [];
+    }
+    checklist.appendChild(div);
+  });
+
+  function addImage(idx){
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = async e => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(',')[1];
+        const fileName = `item${idx}_img${images[idx].length + 1}.jpg`;
+        await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName, folderName: now.toISOString().split('T')[0], fileData: base64 })
+        });
+        images[idx].push(fileName);
+        const img = document.createElement('img');
+        img.src = reader.result;
+        img.className = 'preview-img';
+        document.getElementById(`img${idx}`).appendChild(img);
+        document.getElementById(`item${idx}`).checked = true;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
+
+  document.getElementById('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    document.getElementById('progressOverlay').style.display = 'flex';
+    document.getElementById('progressText').textContent = 'מכין דוח...';
+
+    const data = {
+      date: document.getElementById('dateTime').value,
+      employee: document.getElementById('employeeName').value,
+      folderName: now.toISOString().split('T')[0],
+      items: items.map((item, idx) => ({
+        text: item.text,
+        done: document.getElementById(`item${idx}`).checked,
+        images: images[idx] || []
+      }))
+    };
+
+    const resp = await fetch('/api/create-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await resp.json();
+    document.getElementById('progressOverlay').style.display = 'none';
+    document.getElementById('whatsappBtn').style.display = 'block';
+    document.getElementById('whatsappBtn').onclick = () => {
+      const text = `דוח סגירה חדש:\n${result.link}`;
+      window.open(`https://wa.me/972549090028?text=${encodeURIComponent(text)}`);
+    };
+  });
+</script>
+
+</body>
+</html>
