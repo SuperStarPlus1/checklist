@@ -15,9 +15,11 @@
     .add-image-btn img { width: 30px; height: 30px; filter: invert(100%); }
     .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8); transition: opacity 0.5s, transform 0.5s; }
     .preview-img.loaded { opacity: 1; transform: scale(1); }
+    #taskCounter { position: fixed; top: 20px; left: 20px; background: #2196f3; color: white; padding: 10px 20px; border-radius: 50px; font-size: 16px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 1000; }
   </style>
 </head>
 <body>
+  <div id="taskCounter">משימות שנותרו: 0</div>
   <header>
     <img src="logo.png" alt="Logo">
     <h2>משימות סגירת סניף</h2>
@@ -69,6 +71,15 @@
     const checklistDiv = document.getElementById("checklist");
     const images = {};
 
+    function updateTaskCounter() {
+      const total = items.length;
+      let done = 0;
+      for (let i = 0; i < total; i++) {
+        if (document.getElementById(`item${i}`).checked) done++;
+      }
+      document.getElementById("taskCounter").innerText = `משימות שנותרו: ${total - done}`;
+    }
+
     items.forEach((item, idx) => {
       const section = document.createElement("div");
       section.className = "section";
@@ -86,7 +97,10 @@
         images[idx] = [];
       }
       checklistDiv.appendChild(section);
+      document.getElementById(`item${idx}`).addEventListener("change", updateTaskCounter);
     });
+
+    updateTaskCounter();
 
     function addImage(idx) {
       const input = document.createElement("input");
@@ -104,6 +118,7 @@
             img.className = "preview-img loaded";
             document.getElementById(`imgContainer${idx}`).appendChild(img);
             document.getElementById(`item${idx}`).checked = true;
+            updateTaskCounter();
           };
           reader.readAsDataURL(file);
         }
