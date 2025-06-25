@@ -9,17 +9,28 @@
     header { text-align: center; margin-bottom: 20px; }
     .section { background: #fff; margin-bottom: 15px; padding: 15px; border-radius: 8px; }
     .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; }
-    #progress { position: fixed; top: 0; left: 0; width: 100%; background: #4caf50; height: 5px; transition: width 0.3s; }
     #whatsappBtn { margin-top: 20px; padding: 10px; font-size: 20px; background: #25d366; color: white; border: none; border-radius: 8px; }
+    #progressOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+    #progressContainer { background: #2196f3; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+    #progressBarContainer { width: 300px; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; margin: auto; }
+    #progressBar { width: 0%; height: 100%; background: #ffeb3b; transition: width 0.3s; }
   </style>
 </head>
 <body>
 
-  <header>
-  <img src="logo.png" alt="Logo" style="width: 150px; margin-bottom: 10px;">
-  <h2>משימות סגירת סניף</h2>
-</header>
+  <div id="progressOverlay" style="display:none;">
+    <div id="progressContainer">
+      <div id="progressText" style="font-size: 24px; color: white; margin-bottom: 20px;">מתחיל...</div>
+      <div id="progressBarContainer">
+        <div id="progressBar"></div>
+      </div>
+    </div>
+  </div>
 
+  <header>
+    <img src="logo.png" alt="Logo" style="width: 150px; margin-bottom: 10px;">
+    <h2>משימות סגירת סניף</h2>
+  </header>
 
   <form id="checkForm">
     <div class="section">
@@ -36,7 +47,6 @@
     <button type="submit">שלח</button>
   </form>
 
-  <div id="progress" style="width:0%"></div>
   <div id="result"></div>
 
   <button id="whatsappBtn" style="display:none;">📤 שלח בוואטסאפ</button>
@@ -120,13 +130,19 @@
       input.click();
     }
 
-    function setProgress(percent) {
-      document.getElementById("progress").style.width = percent + "%";
+    function showProgress(stage, percent) {
+      document.getElementById("progressOverlay").style.display = 'flex';
+      document.getElementById("progressText").textContent = stage;
+      document.getElementById("progressBar").style.width = percent + "%";
+    }
+
+    function hideProgress() {
+      document.getElementById("progressOverlay").style.display = 'none';
     }
 
     document.getElementById("checkForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      setProgress(5);
+      showProgress("מכין תיקיה...", 5);
 
       const folderName = dateStr.split(' ')[0];
       await fetch('/api/upload', {
@@ -139,6 +155,7 @@
       for (const arr of Object.values(images)) total += arr.length;
       let count = 0;
 
+      showProgress("מעלה תמונות...", 10);
       for (let i = 0; i < items.length; i++) {
         if (items[i].requireImage && images[i].length > 0) {
           for (const img of images[i]) {
@@ -148,12 +165,13 @@
               body: JSON.stringify({ folderName, fileName: img.name, fileData: img.data })
             });
             count++;
-            setProgress(5 + (count / total) * 80);
+            let percent = 10 + (count / total) * 60;
+            showProgress("מעלה תמונות...", percent);
           }
         }
       }
 
-      setProgress(90);
+      showProgress("יוצר דוח...", 80);
 
       const sections = items.map((item, idx) => ({
         text: item.text,
@@ -173,14 +191,18 @@
 
       if (reportRes.ok) {
         const { link } = await reportRes.json();
-        setProgress(100);
-        document.getElementById("result").innerText = "הדוח נוצר!";
-        document.getElementById("whatsappBtn").style.display = 'block';
-        document.getElementById("whatsappBtn").onclick = () => {
-          const text = `נוצר דוח חדש:\n${link}`;
-          window.open(`https://api.whatsapp.com/send?phone=972549090028&text=${encodeURIComponent(text)}`, '_blank');
-        };
+        showProgress("הושלם!", 100);
+        setTimeout(() => {
+          hideProgress();
+          document.getElementById("result").innerText = "הדוח נוצר!";
+          document.getElementById("whatsappBtn").style.display = 'block';
+          document.getElementById("whatsappBtn").onclick = () => {
+            const text = `נוצר דוח חדש:\n${link}`;
+            window.open(`https://api.whatsapp.com/send?phone=972549090028&text=${encodeURIComponent(text)}`, '_blank');
+          };
+        }, 1000);
       } else {
+        hideProgress();
         document.getElementById("result").innerText = "שגיאה ביצירת הדוח.";
       }
     });
