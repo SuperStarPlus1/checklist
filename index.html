@@ -5,22 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>משימות סגירת סניף</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; direction: rtl; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f2f5; direction: rtl; }
     header { text-align: center; margin-bottom: 20px; }
-    .section { background: #fff; margin-bottom: 15px; padding: 15px; border-radius: 8px; }
-    .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; }
-    #whatsappBtn { margin-top: 20px; padding: 10px; font-size: 20px; background: #25d366; color: white; border: none; border-radius: 8px; }
-    #progressOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 9999; display: flex; justify-content: center; align-items: center; }
-    #progressContainer { background: #2196f3; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-    #progressBarContainer { width: 300px; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; margin: auto; }
-    #progressBar { width: 0%; height: 100%; background: #ffeb3b; transition: width 0.3s; }
+    header img { width: 150px; margin-bottom: 10px; }
+    header h2 { font-size: 28px; color: #333; }
+    .section {
+      background: white; margin-bottom: 15px; padding: 15px;
+      border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    button[type="button"] {
+      background: #2196f3; color: white; border: none; padding: 10px 20px;
+      border-radius: 8px; font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+    }
+    button[type="button"]:hover { background: #1976d2; }
+    .camera-icon {
+      width: 20px; height: 20px; vertical-align: middle;
+      filter: invert(100%);
+    }
+    .preview-img {
+      width: 100px; height: 100px; object-fit: cover;
+      margin: 5px; border: 1px solid #ccc; border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+    #progressOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 9999;
+      display: flex; justify-content: center; align-items: center;
+      flex-direction: column;
+    }
+    #progressContainer {
+      background: #2196f3; padding: 30px; border-radius: 15px;
+      text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      position: relative;
+    }
+    #progressContainer img.logo {
+      width: 100px; margin-bottom: 20px;
+    }
+    #progressText { font-size: 24px; color: white; margin-bottom: 20px; }
+    #progressBarContainer {
+      width: 300px; height: 20px; background: #ddd;
+      border-radius: 10px; overflow: hidden; margin: auto;
+    }
+    #progressBar {
+      width: 0%; height: 100%; background: #ffeb3b; transition: width 0.3s;
+    }
+    #whatsappBtn {
+      position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+      background: #25d366; color: white; border: none; padding: 20px 40px;
+      border-radius: 50px; font-size: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      display: none; cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
   <div id="progressOverlay" style="display:none;">
     <div id="progressContainer">
-      <div id="progressText" style="font-size: 24px; color: white; margin-bottom: 20px;">מתחיל...</div>
+      <img src="logo.png" class="logo" alt="Logo">
+      <div id="progressText">מתחיל...</div>
       <div id="progressBarContainer">
         <div id="progressBar"></div>
       </div>
@@ -28,7 +71,7 @@
   </div>
 
   <header>
-    <img src="logo.png" alt="Logo" style="width: 150px; margin-bottom: 10px;">
+    <img src="logo.png" alt="Logo">
     <h2>משימות סגירת סניף</h2>
   </header>
 
@@ -44,12 +87,12 @@
     </div>
 
     <div id="checklist"></div>
-    <button type="submit">שלח</button>
+    <button type="submit" style="margin-top:20px; padding: 10px 30px; font-size: 18px;">שלח</button>
   </form>
 
   <div id="result"></div>
 
-  <button id="whatsappBtn" style="display:none;">📤 שלח בוואטסאפ</button>
+  <button id="whatsappBtn">📤 שלח את הדוח בוואטסאפ</button>
 
   <script>
     const items = [
@@ -61,9 +104,9 @@
       { text: "חיבור מכונת שטיפה לחשמל", requireImage: true },
       { text: "כיבוי אור שירותים", requireImage: false },
       { text: "כיבוי אורות מקררים", requireImage: false },
-      { text: "צילום טמפרטורת של מקררי חלב", requireImage: true },
+      { text: "צילום טמפרוטורת של מקררי חלב", requireImage: true },
       { text: "סגירת דלת מחסן אמצעית", requireImage: false },
-      { text: "צילום טמפרטורת של מקפיא עומד", requireImage: true },
+      { text: "צילום טמפרטורטת של מקפיא עומד", requireImage: true },
       { text: "מעבר בין המדפים לוודא שאין חריגים ולוודא ניקיון מעברים", requireImage: false },
       { text: "סגירת דלת מחסן אחורית (ליד המקרר)", requireImage: false },
       { text: "לוודא שכל המקררי גיבוי ומקפאים סגורים", requireImage: true },
@@ -99,7 +142,7 @@
         section.appendChild(imgContainer);
         const addBtn = document.createElement("button");
         addBtn.type = "button";
-        addBtn.innerText = "הוסף תמונה";
+        addBtn.innerHTML = `<img class="camera-icon" src="https://upload.wikimedia.org/wikipedia/commons/e/e3/Camera_font_awesome.svg"> הוסף תמונה`;
         addBtn.onclick = () => addImage(idx);
         section.appendChild(addBtn);
         images[idx] = [];
