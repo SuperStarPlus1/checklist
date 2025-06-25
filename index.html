@@ -9,6 +9,8 @@
     header { text-align: center; margin-bottom: 20px; }
     .section { background: #fff; margin-bottom: 15px; padding: 15px; border-radius: 8px; }
     .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; }
+    #progress { position: fixed; top: 0; left: 0; width: 100%; background: #4caf50; height: 5px; transition: width 0.3s; }
+    #whatsappBtn { margin-top: 20px; padding: 10px; font-size: 20px; background: #25d366; color: white; border: none; border-radius: 8px; }
   </style>
 </head>
 <body>
@@ -32,7 +34,52 @@
     <button type="submit">שלח</button>
   </form>
 
+  <div id="progress" style="width:0%"></div>
   <div id="result"></div>
+
+  <button id="whatsappBtn" style="display:none;">📤 שלח בוואטסאפ</button>
+
+  <script>
+    <!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>משימות סגירת סניף</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; direction: rtl; }
+    header { text-align: center; margin-bottom: 20px; }
+    .section { background: #fff; margin-bottom: 15px; padding: 15px; border-radius: 8px; }
+    .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; }
+    #progress { position: fixed; top: 0; left: 0; width: 100%; background: #4caf50; height: 5px; transition: width 0.3s; }
+    #whatsappBtn { margin-top: 20px; padding: 10px; font-size: 20px; background: #25d366; color: white; border: none; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>משימות סגירת סניף</h2>
+  </header>
+
+  <form id="checkForm">
+    <div class="section">
+      <label>תאריך ושעה:</label>
+      <input type="text" id="dateTime" readonly>
+    </div>
+
+    <div class="section">
+      <label>שם עובד:</label>
+      <input type="text" id="employeeName" required>
+    </div>
+
+    <div id="checklist"></div>
+    <button type="submit">שלח</button>
+  </form>
+
+  <div id="progress" style="width:0%"></div>
+  <div id="result"></div>
+
+  <button id="whatsappBtn" style="display:none;">📤 שלח בוואטסאפ</button>
 
   <script>
     const items = [
@@ -64,6 +111,89 @@
       { text: "כיבוי אורות ראשי", requireImage: false },
       { text: "לוודא שאין הפרעה לתריס הראשי. לסגור את התריס ולוודא שנסגר עד הסוף", requireImage: true }
     ];
+
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 16).replace('T', ' ');
+    document.getElementById('dateTime').value = dateStr;
+
+    const checklistDiv = document.getElementById("checklist");
+    const images = {};
+
+    items.forEach((item, idx) => {
+      const section = document.createElement("div");
+      section.className = "section";
+      section.innerHTML = `<label><input type="checkbox" id="item${idx}"> ${item.text}</label>`;
+      if (item.requireImage) {
+        const imgContainer = document.createElement("div");
+        imgContainer.id = `imgContainer${idx}`;
+        section.appendChild(imgContainer);
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.innerText = "הוסף תמונה";
+        addBtn.onclick = () => addImage(idx);
+        section.appendChild(addBtn);
+        images[idx] = [];
+      }
+      checklistDiv.appendChild(section);
+    });
+
+    function addImage(idx) {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.capture = "environment";
+      input.onchange = e => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            images[idx].push({ name: `item${idx}_image${images[idx].length+1}.jpg`, data: reader.result.split(',')[1] });
+            const img = document.createElement("img");
+            img.src = reader.result;
+            img.className = "preview-img";
+            document.getElementById(`imgContainer${idx}`).appendChild(img);
+            document.getElementById(`item${idx}`).checked = true;
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    }
+
+    function setProgress(percent) {
+      document.getElementById("progress").style.width = percent + "%";
+    }
+
+    document.getElementById("checkForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setProgress(5);
+
+      const folderName = dateStr.split(' ')[0];
+      await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderName })
+      });
+
+      let total = 0;
+      for (const arr of Object.values(images)) total += arr.length;
+      let count = 0;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].requireImage && images[i].length > 0) {
+          for (const img of images[i]) {
+            await fetch('/api/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ folderName, fileName: img.name, fileData: img.data })
+            });
+            count++;
+            setProgress(5 + (count / total) * 80);
+          }
+        }
+      }
+
+      setProgress(90);
 
 
     const now = new Date();
@@ -101,7 +231,7 @@
         if (file) {
           const reader = new FileReader();
           reader.onload = () => {
-            images[idx].push(reader.result);
+            images[idx].push({ name: `item${idx}_image${images[idx].length+1}.jpg`, data: reader.result.split(',')[1] });
             const img = document.createElement("img");
             img.src = reader.result;
             img.className = "preview-img";
@@ -114,9 +244,13 @@
       input.click();
     }
 
+    function setProgress(percent) {
+      document.getElementById("progress").style.width = percent + "%";
+    }
+
     document.getElementById("checkForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      document.getElementById("result").innerText = "מתחיל העלאה...";
+      setProgress(5);
 
       const folderName = dateStr.split(' ')[0];
       await fetch('/api/upload', {
@@ -125,30 +259,30 @@
         body: JSON.stringify({ folderName })
       });
 
-      // מעלים תמונות כרגיל
+      let total = 0;
+      for (const arr of Object.values(images)) total += arr.length;
+      let count = 0;
+
       for (let i = 0; i < items.length; i++) {
         if (items[i].requireImage && images[i].length > 0) {
-          for (let j = 0; j < images[i].length; j++) {
-            const fileName = `item${i}_image${j+1}.jpg`;
+          for (const img of images[i]) {
             await fetch('/api/upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                folderName, 
-                fileName, 
-                fileData: images[i][j].split(',')[1]
-              })
+              body: JSON.stringify({ folderName, fileName: img.name, fileData: img.data })
             });
+            count++;
+            setProgress(5 + (count / total) * 80);
           }
         }
       }
 
-      document.getElementById("result").innerText = "יוצר דוח...";
+      setProgress(90);
 
-      // שליחת הנתונים ליצירת דוח
       const sections = items.map((item, idx) => ({
         text: item.text,
-        done: document.getElementById(`item${idx}`).checked
+        done: document.getElementById(`item${idx}`).checked,
+        images: (images[idx] || []).map(img => img.name)
       }));
 
       const reportRes = await fetch('/api/create-report', {
@@ -162,7 +296,14 @@
       });
 
       if (reportRes.ok) {
-        document.getElementById("result").innerText = "הדוח נוצר בהצלחה!";
+        const { link } = await reportRes.json();
+        setProgress(100);
+        document.getElementById("result").innerText = "הדוח נוצר!";
+        document.getElementById("whatsappBtn").style.display = 'block';
+        document.getElementById("whatsappBtn").onclick = () => {
+          const text = `נוצר דוח חדש:\n${link}`;
+          window.open(`https://api.whatsapp.com/send?phone=972549090028&text=${encodeURIComponent(text)}`, '_blank');
+        };
       } else {
         document.getElementById("result").innerText = "שגיאה ביצירת הדוח.";
       }
