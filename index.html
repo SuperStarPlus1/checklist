@@ -82,7 +82,7 @@
     const now = new Date();
     document.getElementById("dateTime").value = now.toLocaleString();
     const checklistDiv = document.getElementById("checklist");
-    const images = {};
+    const uploadedFiles = {};
 
     function updateTaskCounter() {
       const total = items.length;
@@ -103,7 +103,7 @@
         addBtn.innerHTML = '<img src="https://cdn-icons-png.flaticon.com/512/685/685655.png">';
         addBtn.onclick = () => addImage(idx); section.appendChild(addBtn);
         const imgContainer = document.createElement("div"); imgContainer.id = `imgContainer${idx}`;
-        section.appendChild(imgContainer); images[idx] = [];
+        section.appendChild(imgContainer); uploadedFiles[idx] = [];
       }
       checklistDiv.appendChild(section);
       document.getElementById(`item${idx}`).addEventListener("change", updateTaskCounter);
@@ -111,11 +111,14 @@
 
     updateTaskCounter();
 
-    function addImage(idx) {
+    async function addImage(idx) {
       const input = document.createElement("input"); input.type = "file"; input.accept = "image/*"; input.capture = "environment";
-      input.onchange = e => { const file = e.target.files[0]; if (file) {
-        const reader = new FileReader(); reader.onload = () => {
-          images[idx].push(reader.result);
+      input.onchange = async e => { const file = e.target.files[0]; if (file) {
+        const reader = new FileReader(); reader.onload = async () => {
+          const base64 = reader.result.split(',')[1];
+          const fileName = `item${idx}_image${uploadedFiles[idx].length+1}.jpg`;
+          await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName: now.toISOString().split('T')[0], fileName, fileData: base64 }) });
+          uploadedFiles[idx].push(fileName);
           const img = document.createElement("img"); img.src = reader.result; img.className = "preview-img";
           document.getElementById(`imgContainer${idx}`).appendChild(img);
           document.getElementById(`item${idx}`).checked = true; updateTaskCounter();
@@ -132,25 +135,13 @@
     document.getElementById("checkForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       for (let i = 0; i < items.length; i++) {
-        if (items[i].requireImage && (!images[i] || images[i].length === 0)) {
+        if (items[i].requireImage && (!uploadedFiles[i] || uploadedFiles[i].length === 0)) {
           alert(`נדרש לצרף לפחות תמונה אחת עבור: ${items[i].text}`); return;
         }
       }
       const folderName = now.toISOString().split('T')[0];
-      showProgress("מכין תיקיה...", 10);
-      await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName }) });
-      let total = 0; for (const arr of Object.values(images)) total += arr.length; let count = 0;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].requireImage && images[i].length > 0) {
-          for (let j = 0; j < images[i].length; j++) {
-            const fileName = `item${i}_image${j+1}.jpg`;
-            await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName, fileName, fileData: images[i][j].split(',')[1] }) });
-            count++; showProgress("מעלה תמונות...", 10 + (count/total)*60);
-          }
-        }
-      }
       showProgress("יוצר דוח...", 80);
-      const sections = items.map((item, idx) => ({ text: item.text, done: document.getElementById(`item${idx}`).checked, images: (images[idx]||[]).map((_,i)=>`item${idx}_image${i+1}.jpg`) }));
+      const sections = items.map((item, idx) => ({ text: item.text, done: document.getElementById(`item${idx}`).checked, images: uploadedFiles[idx] || [] }));
       const reportRes = await fetch('/api/create-report', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName, employeeName: document.getElementById("employeeName").value, sections }) });
       if (reportRes.ok) {
         const { link } = await reportRes.json();
