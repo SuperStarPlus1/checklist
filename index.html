@@ -51,7 +51,35 @@
     <button type="submit" style="margin-top:20px; padding: 10px 30px; font-size: 18px; background-color:#2196f3; color:white; border:none; border-radius:8px;">שלח טופס בקרה</button>
   </form>
   <script>
-    const items = [...]; // נשאיר כאן את רשימת הסעיפים שלך
+  const items = [
+      { text: "לוודא שכל הקרטונים בדחסן", requireImage: true },
+      { text: "להוציא עגלות מהמחסן", requireImage: false },
+      { text: "לוודא עם עובד מחלקת ירקות חיבור מלגזה לטעינה", requireImage: true },
+      { text: "סגירת דלת מחסן מזרחית", requireImage: false },
+      { text: "כיבוי אורות ממ\"ד", requireImage: false },
+      { text: "חיבור מכונת שטיפה לחשמל", requireImage: true },
+      { text: "כיבוי אור שירותים", requireImage: false },
+      { text: "כיבוי אורות מקררים", requireImage: false },
+      { text: "צילום טמפרוטורת של מקררי חלב", requireImage: true },
+      { text: "סגירת דלת מחסן אמצעית", requireImage: false },
+      { text: "צילום טמפרטורטת של מקפיא עומד", requireImage: true },
+      { text: "מעבר בין המדפים לוודא שאין חריגים ולוודא ניקיון מעברים", requireImage: false },
+      { text: "סגירת דלת מחסן אחורית (ליד המקרר)", requireImage: false },
+      { text: "לוודא שכל המקררי גיבוי ומקפאים סגורים", requireImage: true },
+      { text: "צילום טמפרטורות של מקררי גיבוי", requireImage: true },
+      { text: "לוודא שאין עגלות בתוך הסופר", requireImage: false },
+      { text: "פינוי פחים כלל פח קופה ראשית", requireImage: false },
+      { text: "כיבוי אורות מחלקת שתיה וחומרי ניקוי", requireImage: false },
+      { text: "כיבוי מזגנים בחלק האחורי", requireImage: true },
+      { text: "צילום מדף לחם ושליחה לאשרף", requireImage: true },
+      { text: "להוציא עגלת חזרות לחם", requireImage: true },
+      { text: "לוודא נעילת שער חצר ארגזים", requireImage: false },
+      { text: "לוודא שאין עגלות שלא במקומם", requireImage: false },
+      { text: "כיבוי מזגנים", requireImage: true },
+      { text: "כיבוי אורות כניסה והדלקת תאורת לילה", requireImage: false },
+      { text: "כיבוי אורות ראשי", requireImage: false },
+      { text: "לוודא שאין הפרעה לתריס הראשי. לסגור את התריס ולוודא שנסגר עד הסוף", requireImage: true }
+    ];
     const now = new Date();
     document.getElementById("dateTime").value = now.toLocaleString();
     const checklistDiv = document.getElementById("checklist");
