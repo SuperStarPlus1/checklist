@@ -22,6 +22,7 @@
     #progressText { font-size: 24px; margin-bottom: 20px; }
     #progressBarContainer { width: 100%; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; margin: auto; }
     #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffeb3b, #ffc107); transition: width 0.5s ease-in-out; }
+    #whatsappInsideBtn { margin-top: 20px; background: #25d366; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 20px; cursor: pointer; display: none; }
     @keyframes pulse { 0% { box-shadow: 0 0 5px yellow; } 50% { box-shadow: 0 0 15px yellow; } 100% { box-shadow: 0 0 5px yellow; } }
   </style>
 </head>
@@ -34,6 +35,7 @@
       </div>
       <div id="progressText">מתחיל...</div>
       <div id="progressBarContainer"><div id="progressBar"></div></div>
+      <button id="whatsappInsideBtn">📤 שלח את הדוח בוואטסאפ</button>
     </div>
   </div>
   <header>
@@ -47,7 +49,7 @@
     <button type="submit" style="margin-top:20px; padding: 10px 30px; font-size: 18px; background-color:#2196f3; color:white; border:none; border-radius:8px;">שלח טופס בקרה</button>
   </form>
   <script>
-    const items = [
+    const items = [...
       { text: "לוודא שכל הקרטונים בדחסן", requireImage: true },
       { text: "להוציא עגלות מהמחסן", requireImage: false },
       { text: "לוודא עם עובד מחלקת ירקות חיבור מלגזה לטעינה", requireImage: true },
@@ -120,6 +122,46 @@
         }; reader.readAsDataURL(file);
       }}; input.click();
     }
+
+    function showProgress(stage, percent) {
+      document.getElementById("progressOverlay").style.display = 'flex';
+      document.getElementById("progressText").innerText = stage;
+      document.getElementById("progressBar").style.width = percent + "%";
+    }
+
+    document.getElementById("checkForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].requireImage && (!images[i] || images[i].length === 0)) {
+          alert(`נדרש לצרף לפחות תמונה אחת עבור: ${items[i].text}`); return;
+        }
+      }
+      const folderName = now.toISOString().split('T')[0];
+      showProgress("מכין תיקיה...", 10);
+      await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName }) });
+      let total = 0; for (const arr of Object.values(images)) total += arr.length; let count = 0;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].requireImage && images[i].length > 0) {
+          for (let j = 0; j < images[i].length; j++) {
+            const fileName = `item${i}_image${j+1}.jpg`;
+            await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName, fileName, fileData: images[i][j].split(',')[1] }) });
+            count++; showProgress("מעלה תמונות...", 10 + (count/total)*60);
+          }
+        }
+      }
+      showProgress("יוצר דוח...", 80);
+      const sections = items.map((item, idx) => ({ text: item.text, done: document.getElementById(`item${idx}`).checked, images: (images[idx]||[]).map((_,i)=>`item${idx}_image${i+1}.jpg`) }));
+      const reportRes = await fetch('/api/create-report', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName, employeeName: document.getElementById("employeeName").value, sections }) });
+      if (reportRes.ok) {
+        const { link } = await reportRes.json();
+        showProgress("הושלם!", 100);
+        const btn = document.getElementById("whatsappInsideBtn");
+        btn.style.display = 'block';
+        btn.onclick = () => window.open(`https://api.whatsapp.com/send?phone=972549090028&text=${encodeURIComponent("נוצר דוח חדש:\n" + link)}`,'_blank');
+      } else {
+        alert("שגיאה ביצירת הדוח."); document.getElementById("progressOverlay").style.display = 'none';
+      }
+    });
   </script>
 </body>
 </html>
