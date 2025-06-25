@@ -43,13 +43,22 @@ export default async function handler(req, res) {
     th, td { border: 1px solid #aaa; padding: 10px; text-align: center; }
     .done { color: green; font-weight: bold; }
     .fail { color: red; font-weight: bold; }
+    img { width:150px; margin:5px; }
   </style></head><body>
-  <h2>דוח סיכום סגירת סניף</h2>
+  <h2>דוח סגירת סניף</h2>
   <p><b>שם עובד:</b> ${employeeName}</p>
   <table><tr><th>סטטוס</th><th>סעיף</th></tr>`;
 
   for (const item of sections) {
     html += `<tr><td class="${item.done ? 'done' : 'fail'}">${item.done ? 'בוצע' : 'לא בוצע'}</td><td>${item.text}</td></tr>`;
+    if (item.images && item.images.length > 0) {
+      html += `<tr><td colspan="2">`;
+      for (const img of item.images) {
+        const link = `https://www.dropbox.com/home/forms/${folderName}?preview=${img}`;
+        html += `<a href="${link}" target="_blank"><img src="${link}"></a>`;
+      }
+      html += `</td></tr>`;
+    }
   }
 
   html += `</table></body></html>`;
@@ -68,5 +77,17 @@ export default async function handler(req, res) {
     body: Buffer.from(html, 'utf8')
   });
 
-  res.status(200).json({ message: "Report created" });
+  // צור קישור שיתוף
+  const shareResp = await fetch("https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${DROPBOX_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ path: `/forms/${folderName}/report.html` })
+  });
+
+  const shareData = await shareResp.json();
+
+  res.status(200).json({ link: shareData.url.replace("?dl=0", "?raw=1") });
 }
