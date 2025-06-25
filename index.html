@@ -9,13 +9,20 @@
     header { text-align: center; margin-bottom: 20px; }
     header img { width: 150px; margin-bottom: 10px; animation: fadeIn 1s ease; }
     header h2 { font-size: 28px; color: #333; animation: fadeIn 1s ease; }
-    .section { background: white; margin-bottom: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.1); animation: slideUp 0.5s ease; }
-    .add-image-btn { background: #2196f3; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; margin-top: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; transition: transform 0.2s; }
-    .add-image-btn:hover { transform: scale(1.1); }
-    .add-image-btn img { width: 30px; height: 30px; filter: invert(100%); }
+    .section { background: white; margin-bottom: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.1); animation: slideUp 0.5s ease; display: flex; align-items: center; justify-content: space-between; }
+    .text-container { flex: 1; }
+    .add-image-btn { background: #2196f3; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; margin-right: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; transition: transform 0.2s, box-shadow 0.3s; animation: pulse 2s infinite; }
+    .add-image-btn:hover { transform: scale(1.2); box-shadow: 0 0 20px rgba(255,255,0,0.7); }
+    .add-image-btn img { width: 24px; height: 24px; filter: invert(100%); }
     .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8); transition: opacity 0.5s, transform 0.5s; }
     .preview-img.loaded { opacity: 1; transform: scale(1); }
     #taskCounter { position: fixed; top: 20px; left: 20px; background: #2196f3; color: white; padding: 10px 20px; border-radius: 50px; font-size: 16px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 1000; }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 5px rgba(255,255,0,0.3); }
+      50% { box-shadow: 0 0 15px rgba(255,255,0,0.8); }
+      100% { box-shadow: 0 0 5px rgba(255,255,0,0.3); }
+    }
   </style>
 </head>
 <body>
@@ -83,17 +90,21 @@
     items.forEach((item, idx) => {
       const section = document.createElement("div");
       section.className = "section";
-      section.innerHTML = `<label><input type="checkbox" id="item${idx}"> ${item.text}</label>`;
+      const textContainer = document.createElement("div");
+      textContainer.className = "text-container";
+      textContainer.innerHTML = `<label><input type="checkbox" id="item${idx}"> ${item.text}</label>`;
+      section.appendChild(textContainer);
+
       if (item.requireImage) {
-        const imgContainer = document.createElement("div");
-        imgContainer.id = `imgContainer${idx}`;
-        section.appendChild(imgContainer);
         const addBtn = document.createElement("button");
         addBtn.type = "button";
         addBtn.className = "add-image-btn";
-        addBtn.innerHTML = "📷";
+        addBtn.innerHTML = '<img src="https://cdn-icons-png.flaticon.com/512/685/685655.png">';
         addBtn.onclick = () => addImage(idx);
         section.appendChild(addBtn);
+        const imgContainer = document.createElement("div");
+        imgContainer.id = `imgContainer${idx}`;
+        section.appendChild(imgContainer);
         images[idx] = [];
       }
       checklistDiv.appendChild(section);
