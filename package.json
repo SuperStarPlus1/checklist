@@ -1,9 +1,0 @@
-{
-  "name": "checklist-project",
-  "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "node-fetch": "^3.4.1",
-    "formidable": "^3.5.0"
-  }
-}
