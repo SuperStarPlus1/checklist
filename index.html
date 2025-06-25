@@ -3,43 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>משימות סגירת סניף - גרסה מלאה</title>
+  <title>משימות סגירת סניף - מערכת מלאה</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f0f2f5; direction: rtl; }
     header { text-align: center; margin-bottom: 20px; }
-    header img { width: 150px; margin-bottom: 10px; animation: fadeIn 1s ease; }
-    header h2 { font-size: 28px; color: #333; animation: fadeIn 1s ease; }
-    .section { background: white; margin-bottom: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.1); animation: slideUp 0.5s ease; display: flex; align-items: center; justify-content: space-between; }
+    header img { width: 150px; margin-bottom: 10px; }
+    header h2 { font-size: 28px; color: #333; }
+    .section { background: white; margin-bottom: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; }
     .text-container { flex: 1; }
-    .add-image-btn { background: #2196f3; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; margin-right: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; transition: transform 0.2s, box-shadow 0.3s; animation: pulse 2s infinite; }
-    .add-image-btn:hover { transform: scale(1.2); box-shadow: 0 0 20px rgba(255,255,0,0.7); }
+    .add-image-btn { background: #2196f3; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; margin-right: 10px; display: flex; justify-content: center; align-items: center; transition: transform 0.2s; animation: pulse 2s infinite; }
+    .add-image-btn:hover { transform: scale(1.2); }
     .add-image-btn img { width: 24px; height: 24px; filter: invert(100%); }
-    .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8); transition: opacity 0.5s, transform 0.5s; }
-    .preview-img.loaded { opacity: 1; transform: scale(1); }
-    #taskCounter { position: fixed; top: 20px; left: 20px; background: #2196f3; color: white; padding: 10px 20px; border-radius: 50px; font-size: 16px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 1000; }
-
-    @keyframes pulse {
-      0% { box-shadow: 0 0 5px rgba(255,255,0,0.3); }
-      50% { box-shadow: 0 0 15px rgba(255,255,0,0.8); }
-      100% { box-shadow: 0 0 5px rgba(255,255,0,0.3); }
-    }
+    .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+    #taskCounter { position: fixed; top: 20px; left: 20px; background: #2196f3; color: white; padding: 10px 20px; border-radius: 50px; font-size: 16px; z-index: 1000; }
+    #progressOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+    #progressContainer { background: white; padding: 30px; border-radius: 15px; text-align: center; width: 90%; max-width: 400px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+    #progressHeader { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+    #progressText { font-size: 24px; margin-bottom: 20px; }
+    #progressBarContainer { width: 100%; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; margin: auto; }
+    #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffeb3b, #ffc107); transition: width 0.5s ease-in-out; }
+    #whatsappInsideBtn { margin-top: 20px; background: #25d366; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 20px; cursor: pointer; display: none; }
+    @keyframes pulse { 0% { box-shadow: 0 0 5px yellow; } 50% { box-shadow: 0 0 15px yellow; } 100% { box-shadow: 0 0 5px yellow; } }
   </style>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
 <body>
   <div id="taskCounter">משימות שנותרו: 0</div>
+  <div id="progressOverlay" style="display:none">
+    <div id="progressContainer">
+      <div id="progressHeader">
+        <img src="logo.png" alt="Logo">
+        <lottie-player src="https://lottie.host/97c2dc2e-6ffd-43a0-949f-30bae814b26b/4uJ8Pki0Zx.json" background="transparent" speed="1" loop autoplay style="width:200px;height:200px;"></lottie-player>
+      </div>
+      <div id="progressText">מתחיל...</div>
+      <div id="progressBarContainer"><div id="progressBar"></div></div>
+      <button id="whatsappInsideBtn">📤 שלח את הדוח בוואטסאפ</button>
+    </div>
+  </div>
   <header>
     <img src="logo.png" alt="Logo">
     <h2>משימות סגירת סניף</h2>
   </header>
   <form id="checkForm">
-    <div class="section">
-      <label>תאריך ושעה:</label>
-      <input type="text" id="dateTime" readonly>
-    </div>
-    <div class="section">
-      <label>שם עובד:</label>
-      <input type="text" id="employeeName" required>
-    </div>
+    <div class="section"><label>תאריך ושעה:</label><input type="text" id="dateTime" readonly></div>
+    <div class="section"><label>שם עובד:</label><input type="text" id="employeeName" required></div>
     <div id="checklist"></div>
     <button type="submit" style="margin-top:20px; padding: 10px 30px; font-size: 18px; background-color:#2196f3; color:white; border:none; border-radius:8px;">שלח טופס בקרה</button>
   </form>
@@ -49,13 +56,13 @@
       { text: "להוציא עגלות מהמחסן", requireImage: false },
       { text: "לוודא עם עובד מחלקת ירקות חיבור מלגזה לטעינה", requireImage: true },
       { text: "סגירת דלת מחסן מזרחית", requireImage: false },
-      { text: "כיבוי אורות ממ\"ד", requireImage: false },
+      { text: "כיבוי אורות ממ" + "ד", requireImage: false },
       { text: "חיבור מכונת שטיפה לחשמל", requireImage: true },
       { text: "כיבוי אור שירותים", requireImage: false },
       { text: "כיבוי אורות מקררים", requireImage: false },
-      { text: "צילום טמפרוטורת של מקררי חלב", requireImage: true },
+      { text: "צילום טמפרטורת של מקררי חלב", requireImage: true },
       { text: "סגירת דלת מחסן אמצעית", requireImage: false },
-      { text: "צילום טמפרטורטת של מקפיא עומד", requireImage: true },
+      { text: "צילום טמפרטורת של מקפיא עומד", requireImage: true },
       { text: "מעבר בין המדפים לוודא שאין חריגים ולוודא ניקיון מעברים", requireImage: false },
       { text: "סגירת דלת מחסן אחורית (ליד המקרר)", requireImage: false },
       { text: "לוודא שכל המקררי גיבוי ומקפאים סגורים", requireImage: true },
@@ -77,7 +84,6 @@
     document.getElementById("dateTime").value = now.toLocaleString();
     const checklistDiv = document.getElementById("checklist");
     const images = {};
-
     function updateTaskCounter() {
       const total = items.length;
       let done = 0;
@@ -86,67 +92,33 @@
       }
       document.getElementById("taskCounter").innerText = `משימות שנותרו: ${total - done}`;
     }
-
     items.forEach((item, idx) => {
-      const section = document.createElement("div");
-      section.className = "section";
-      const textContainer = document.createElement("div");
-      textContainer.className = "text-container";
+      const section = document.createElement("div"); section.className = "section";
+      const textContainer = document.createElement("div"); textContainer.className = "text-container";
       textContainer.innerHTML = `<label><input type="checkbox" id="item${idx}"> ${item.text}</label>`;
       section.appendChild(textContainer);
-
       if (item.requireImage) {
-        const addBtn = document.createElement("button");
-        addBtn.type = "button";
-        addBtn.className = "add-image-btn";
+        const addBtn = document.createElement("button"); addBtn.type = "button"; addBtn.className = "add-image-btn";
         addBtn.innerHTML = '<img src="https://cdn-icons-png.flaticon.com/512/685/685655.png">';
-        addBtn.onclick = () => addImage(idx);
-        section.appendChild(addBtn);
-        const imgContainer = document.createElement("div");
-        imgContainer.id = `imgContainer${idx}`;
-        section.appendChild(imgContainer);
-        images[idx] = [];
+        addBtn.onclick = () => addImage(idx); section.appendChild(addBtn);
+        const imgContainer = document.createElement("div"); imgContainer.id = `imgContainer${idx}`;
+        section.appendChild(imgContainer); images[idx] = [];
       }
       checklistDiv.appendChild(section);
       document.getElementById(`item${idx}`).addEventListener("change", updateTaskCounter);
     });
-
     updateTaskCounter();
-
     function addImage(idx) {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.capture = "environment";
-      input.onchange = e => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = () => {
-            images[idx].push(reader.result);
-            const img = document.createElement("img");
-            img.src = reader.result;
-            img.className = "preview-img loaded";
-            document.getElementById(`imgContainer${idx}`).appendChild(img);
-            document.getElementById(`item${idx}`).checked = true;
-            updateTaskCounter();
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-      input.click();
+      const input = document.createElement("input"); input.type = "file"; input.accept = "image/*"; input.capture = "environment";
+      input.onchange = e => { const file = e.target.files[0]; if (file) {
+        const reader = new FileReader(); reader.onload = () => {
+          images[idx].push(reader.result);
+          const img = document.createElement("img"); img.src = reader.result; img.className = "preview-img";
+          document.getElementById(`imgContainer${idx}`).appendChild(img);
+          document.getElementById(`item${idx}`).checked = true; updateTaskCounter();
+        }; reader.readAsDataURL(file);
+      }}; input.click();
     }
-
-    document.getElementById("checkForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].requireImage && (!images[i] || images[i].length === 0)) {
-          alert(`נדרש לצרף לפחות תמונה אחת עבור: ${items[i].text}`);
-          return;
-        }
-      }
-      alert("הטופס נשלח בהצלחה!");
-    });
   </script>
 </body>
 </html>
