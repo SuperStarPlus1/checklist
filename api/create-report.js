@@ -25,6 +25,39 @@ async function getDropboxAccessToken() {
   return data.access_token;
 }
 
+async function createSharedLink(DROPBOX_TOKEN, path) {
+  const res = await fetch("https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${DROPBOX_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ path })
+  });
+
+  if (res.ok) {
+    const data = await res.json();
+    return data.url.replace("?dl=0", "?raw=1");  // הפיכה ל־direct link
+  } else {
+    // יתכן שכבר יש לינק קיים -> נשתמש בו
+    const existing = await fetch("https://api.dropboxapi.com/2/sharing/list_shared_links", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${DROPBOX_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ path })
+    });
+
+    const existingData = await existing.json();
+    if (existingData.links && existingData.links.length > 0) {
+      return existingData.links[0].url.replace("?dl=0", "?raw=1");
+    } else {
+      throw new Error("Cannot create or retrieve shared link for " + path);
+    }
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -34,6 +67,7 @@ export default async function handler(req, res) {
   }
 
   const DROPBOX_TOKEN = await getDropboxAccessToken();
+  const basePath = `/forms/${folderName}`;
 
   let html = `
   <html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>דוח</title>
@@ -54,8 +88,9 @@ export default async function handler(req, res) {
     if (item.images && item.images.length > 0) {
       html += `<tr><td colspan="2">`;
       for (const img of item.images) {
-        const link = `https://www.dropbox.com/home/forms/${folderName}?preview=${img}`;
-        html += `<a href="${link}" target="_blank"><img src="${link}"></a>`;
+        const imagePath = `${basePath}/${img}`;
+        const imageLink = await createSharedLink(DROPBOX_TOKEN, imagePath);
+        html += `<a href="${imageLink}" target="_blank"><img src="${imageLink}"></a>`;
       }
       html += `</td></tr>`;
     }
@@ -63,13 +98,14 @@ export default async function handler(req, res) {
 
   html += `</table></body></html>`;
 
+  // מעלה את הדוח עצמו לדרופבוקס
   await fetch("https://content.dropboxapi.com/2/files/upload", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${DROPBOX_TOKEN}`,
       "Content-Type": "application/octet-stream",
       "Dropbox-API-Arg": JSON.stringify({
-        path: `/forms/${folderName}/report.html`,
+        path: `${basePath}/report.html`,
         mode: "overwrite",
         autorename: false
       })
@@ -77,17 +113,8 @@ export default async function handler(req, res) {
     body: Buffer.from(html, 'utf8')
   });
 
-  // צור קישור שיתוף
-  const shareResp = await fetch("https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${DROPBOX_TOKEN}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ path: `/forms/${folderName}/report.html` })
-  });
+  // גם לקובץ הדוח עצמו נייצר קישור שיתוף
+  const reportSharedLink = await createSharedLink(DROPBOX_TOKEN, `${basePath}/report.html`);
 
-  const shareData = await shareResp.json();
-
-  res.status(200).json({ link: shareData.url.replace("?dl=0", "?raw=1") });
+  res.status(200).json({ link: reportSharedLink });
 }
