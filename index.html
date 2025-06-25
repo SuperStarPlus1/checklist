@@ -84,6 +84,9 @@
     const checklistDiv = document.getElementById("checklist");
     const uploadedFiles = {};
 
+    const folderName = now.toISOString().split('T')[0];
+    fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName }) });
+
     function updateTaskCounter() {
       const total = items.length;
       let done = 0;
@@ -117,7 +120,7 @@
         const reader = new FileReader(); reader.onload = async () => {
           const base64 = reader.result.split(',')[1];
           const fileName = `item${idx}_image${uploadedFiles[idx].length+1}.jpg`;
-          await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName: now.toISOString().split('T')[0], fileName, fileData: base64 }) });
+          await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName, fileName, fileData: base64 }) });
           uploadedFiles[idx].push(fileName);
           const img = document.createElement("img"); img.src = reader.result; img.className = "preview-img";
           document.getElementById(`imgContainer${idx}`).appendChild(img);
@@ -139,7 +142,6 @@
           alert(`נדרש לצרף לפחות תמונה אחת עבור: ${items[i].text}`); return;
         }
       }
-      const folderName = now.toISOString().split('T')[0];
       showProgress("יוצר דוח...", 80);
       const sections = items.map((item, idx) => ({ text: item.text, done: document.getElementById(`item${idx}`).checked, images: uploadedFiles[idx] || [] }));
       const reportRes = await fetch('/api/create-report', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName, employeeName: document.getElementById("employeeName").value, sections }) });
