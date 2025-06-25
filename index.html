@@ -13,16 +13,13 @@
       background: white; margin-bottom: 15px; padding: 15px;
       border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    button[type="button"] {
-      background: #2196f3; color: white; border: none; padding: 10px 20px;
-      border-radius: 8px; font-size: 16px; cursor: pointer;
-      display: flex; align-items: center; gap: 8px;
+    .add-image-btn {
+      background: #2196f3; border: none; width: 50px; height: 50px;
+      border-radius: 50%; cursor: pointer; margin-top: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      display: flex; justify-content: center; align-items: center;
     }
-    button[type="button"]:hover { background: #1976d2; }
-    .camera-icon {
-      width: 20px; height: 20px; vertical-align: middle;
-      filter: invert(100%);
-    }
+    .add-image-btn img { width: 30px; height: 30px; filter: invert(100%); }
     .preview-img {
       width: 100px; height: 100px; object-fit: cover;
       margin: 5px; border: 1px solid #ccc; border-radius: 8px;
@@ -37,24 +34,23 @@
     #progressContainer {
       background: #2196f3; padding: 30px; border-radius: 15px;
       text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5);
-      position: relative;
+      position: relative; width: 90%; max-width: 400px;
     }
-    #progressContainer img.logo {
-      width: 100px; margin-bottom: 20px;
-    }
+    #progressContainer img.logo { width: 100px; margin-bottom: 20px; }
     #progressText { font-size: 24px; color: white; margin-bottom: 20px; }
     #progressBarContainer {
-      width: 300px; height: 20px; background: #ddd;
+      width: 100%; height: 20px; background: #ddd;
       border-radius: 10px; overflow: hidden; margin: auto;
     }
     #progressBar {
       width: 0%; height: 100%; background: #ffeb3b; transition: width 0.3s;
     }
-    #whatsappBtn {
-      position: fixed; bottom: 20px; right: 20px; z-index: 9999;
-      background: #25d366; color: white; border: none; padding: 20px 40px;
-      border-radius: 50px; font-size: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.3);
-      display: none; cursor: pointer;
+    #whatsappInsideBtn {
+      margin-top: 20px;
+      background: #25d366; color: white; border: none;
+      padding: 15px 30px; border-radius: 50px; font-size: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3); cursor: pointer;
+      display: none;
     }
   </style>
 </head>
@@ -67,6 +63,7 @@
       <div id="progressBarContainer">
         <div id="progressBar"></div>
       </div>
+      <button id="whatsappInsideBtn">📤 שלח את הדוח בוואטסאפ</button>
     </div>
   </div>
 
@@ -91,8 +88,6 @@
   </form>
 
   <div id="result"></div>
-
-  <button id="whatsappBtn">📤 שלח את הדוח בוואטסאפ</button>
 
   <script>
     const items = [
@@ -142,7 +137,8 @@
         section.appendChild(imgContainer);
         const addBtn = document.createElement("button");
         addBtn.type = "button";
-        addBtn.innerHTML = `<img class="camera-icon" src="https://upload.wikimedia.org/wikipedia/commons/e/e3/Camera_font_awesome.svg"> הוסף תמונה`;
+        addBtn.className = "add-image-btn";
+        addBtn.innerHTML = `<img src="https://cdn-icons-png.flaticon.com/512/747/747376.png">`;
         addBtn.onclick = () => addImage(idx);
         section.appendChild(addBtn);
         images[idx] = [];
@@ -235,18 +231,15 @@
       if (reportRes.ok) {
         const { link } = await reportRes.json();
         showProgress("הושלם!", 100);
-        setTimeout(() => {
+        document.getElementById("whatsappInsideBtn").style.display = 'block';
+        document.getElementById("whatsappInsideBtn").onclick = () => {
+          const text = `נוצר דוח חדש:\n${link}`;
+          window.open(`https://api.whatsapp.com/send?phone=972549090028&text=${encodeURIComponent(text)}`, '_blank');
           hideProgress();
-          document.getElementById("result").innerText = "הדוח נוצר!";
-          document.getElementById("whatsappBtn").style.display = 'block';
-          document.getElementById("whatsappBtn").onclick = () => {
-            const text = `נוצר דוח חדש:\n${link}`;
-            window.open(`https://api.whatsapp.com/send?phone=972549090028&text=${encodeURIComponent(text)}`, '_blank');
-          };
-        }, 1000);
+        };
       } else {
         hideProgress();
-        document.getElementById("result").innerText = "שגיאה ביצירת הדוח.";
+        alert("שגיאה ביצירת הדוח.");
       }
     });
   </script>
