@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>משימות סגירת סניף</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; direction: rtl; }
+    header { text-align: center; margin-bottom: 20px; }
+    img.logo { width: 120px; }
+    .section { background: #fff; margin-bottom: 15px; padding: 15px; border-radius: 8px; }
+    .preview-img { width: 100px; height: 100px; object-fit: cover; margin: 5px; border: 1px solid #ccc; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #progressOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;
+    }
+    #whatsappBtn {
+      display: none;
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background-color: #25d366; color: white; font-size: 20px; padding: 20px 40px;
+      border: none; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.3); z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="logo.png" alt="Logo" class="logo">
+    <h2>משימות סגירת סניף</h2>
+  </header>
+
+  <form id="checkForm">
+    <div class="section">
+      <label>תאריך ושעה:</label>
+      <input type="text" id="dateTime" readonly>
+    </div>
+
+    <div class="section">
+      <label>שם עובד:</label>
+      <input type="text" id="employeeName" required>
+    </div>
+
+    <div id="checklist"></div>
+
+    <button type="submit">שלח</button>
+  </form>
+
+  <!-- פס התקדמות גרפי -->
+  <div id="progressOverlay" style="display: none;">
+    <div style="text-align: center;">
+      <div id="progressSpinner" style="
+        width: 100px; height: 100px; border: 10px solid #eee; border-top: 10px solid #2196f3;
+        border-radius: 50%; animation: spin 1s linear infinite; margin: auto;"></div>
+      <div id="progressText" style="margin-top: 20px; font-size: 20px;">ממתין...</div>
+    </div>
+  </div>
+
+  <!-- כפתור וואטסאפ -->
+  <button id="whatsappBtn">📤 שלח את הדוח בוואטסאפ למנהל</button>
+
+  <script>
+    document.getElementById("progressOverlay").style.display = 'none';
+
+    const items = [
+      { text: "לוודא שכל הקרטונים בדחסן", requireImage: true },
+      { text: "להוציא עגלות מהמחסן", requireImage: false },
+      { text: "לוודא עם עובד מחלקת ירקות חיבור מלגזה לטעינה", requireImage: true },
+      { text: "סגירת דלת מחסן מזרחית", requireImage: false },
+      { text: "כיבוי אורות ממ\"ד", requireImage: false },
+      { text: "חיבור מכונת שטיפה לחשמל", requireImage: true },
+      { text: "כיבוי אור שירותים", requireImage: false },
+      { text: "כיבוי אורות מקררים", requireImage: false },
+      { text: "צילום טמפרוטורת של מקררי חלב", requireImage: true },
+      { text: "סגירת דלת מחסן אמצעית", requireImage: false },
+      { text: "צילום טמפרטורטת של מקפיא עומד", requireImage: true },
+      { text: "מעבר בין המדפים לוודא שאין חריגים ולוודא ניקיון מעברים", requireImage: false },
+      { text: "סגירת דלת מחסן אחורית (ליד המקרר)", requireImage: false },
+      { text: "לוודא שכל המקררי גיבוי ומקפאים סגורים", requireImage: true },
+      { text: "צילום טמפרטורות של מקררי גיבוי", requireImage: true },
+      { text: "לוודא שאין עגלות בתוך הסופר", requireImage: false },
+      { text: "פינוי פחים כלל פח קופה ראשית", requireImage: false },
+      { text: "כיבוי אורות מחלקת שתיה וחומרי ניקוי", requireImage: false },
+      { text: "כיבוי מזגנים בחלק האחורי", requireImage: true },
+      { text: "צילום מדף לחם ושליחה לאשרף", requireImage: true },
+      { text: "להוציא עגלת חזרות לחם", requireImage: true },
+      { text: "לוודא נעילת שער חצר ארגזים", requireImage: false },
+      { text: "לוודא שאין עגלות שלא במקומם", requireImage: false },
+      { text: "כיבוי מזגנים", requireImage: true },
+      { text: "כיבוי אורות כניסה והדלקת תאורת לילה", requireImage: false },
+      { text: "כיבוי אורות ראשי", requireImage: false },
+      { text: "לוודא שאין הפרעה לתריס הראשי. לסגור את התריס ולוודא שנסגר עד הסוף", requireImage: true }
+    ];
+
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 16).replace('T', ' ');
+    document.getElementById('dateTime').value = dateStr;
+
+    const checklistDiv = document.getElementById("checklist");
+    const images = {};
+    let logoBase64 = '';
+
+    fetch('logo.png')
+      .then(response => response.blob())
+      .then(blob => new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      }))
+      .then(base64 => { logoBase64 = base64; });
+
+    items.forEach((item, idx) => {
+      const section = document.createElement("div");
+      section.className = "section";
+      section.innerHTML = `<label><input type="checkbox" id="item${idx}"> ${item.text}</label>`;
+      if (item.requireImage) {
+        const imgContainer = document.createElement("div");
+        imgContainer.id = `imgContainer${idx}`;
+        section.appendChild(imgContainer);
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.innerText = "הוסף תמונה";
+        addBtn.onclick = () => addImage(idx);
+        section.appendChild(addBtn);
+        images[idx] = [];
+      }
+      checklistDiv.appendChild(section);
+    });
+
+    function addImage(idx) {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.capture = "environment";
+      input.onchange = e => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            images[idx].push(reader.result);
+            const img = document.createElement("img");
+            img.src = reader.result;
+            img.className = "preview-img";
+            document.getElementById(`imgContainer${idx}`).appendChild(img);
+            document.getElementById(`item${idx}`).checked = true;
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    }
+
+    function updateProgress(stage, color) {
+      document.getElementById("progressSpinner").style.borderTopColor = color;
+      document.getElementById("progressText").textContent = stage;
+    }
+
+    document.getElementById("checkForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      document.getElementById("progressOverlay").style.display = 'flex';
+
+      const dateTime = document.getElementById("dateTime").value;
+      const employeeName = document.getElementById("employeeName").value.trim();
+      const folderName = dateTime.split(' ')[0];
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].requireImage && document.getElementById(`item${i}`).checked && images[i].length === 0) {
+          alert(`יש להוסיף תמונה עבור: ${items[i].text}`);
+          return;
+        }
+      }
+
+      updateProgress("מכין תיקיה...", "#2196f3");
+      await fetch('/api/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folderName }) });
+
+      updateProgress("מעלה תמונות...", "#ffc107");
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].requireImage && images[i].length > 0) {
+          for (let j = 0; j < images[i].length; j++) {
+            const fileName = `item${i}_image${j+1}.jpg`;
+            await fetch('/api/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ folderName, fileName, fileData: images[i][j].split(',')[1] })
+            });
+          }
+        }
+      }
+
+      updateProgress("מעלה דוח...", "#ffc107");
+
+      let reportHTML = `
+      <html lang="he" dir="rtl">
+      <head><meta charset="UTF-8"><title>דוח</title>
+      <style>
+        body { font-family: sans-serif; text-align:center; direction:rtl; }
+        table { width: 90%; border-collapse: collapse; margin: auto; margin-top: 20px; }
+        th, td { border: 1px solid #aaa; padding: 10px; text-align: center; }
+        .status-done { color: green; font-weight: bold; }
+        .status-fail { color: red; font-weight: bold; }
+        img.photo { width: 150px; height: 150px; object-fit: cover; margin: 5px; border: 1px solid #ccc; }
+      </style></head><body>`;
+
+      reportHTML += `<img src="${logoBase64}" style="width:150px;"><h2>דוח סיכום סגירת סניף</h2>`;
+      reportHTML += `<p><b>שם עובד:</b> ${employeeName}</p>`;
+      reportHTML += `<p><b>תאריך:</b> ${dateStr}</p>`;
+      reportHTML += `<table><tr><th>סטטוס</th><th>סעיף</th></tr>`;
+
+      for (let i = 0; i < items.length; i++) {
+        const checked = document.getElementById(`item${i}`).checked;
+        reportHTML += `<tr>
+          <td class="${checked ? 'status-done' : 'status-fail'}">${checked ? 'בוצע' : 'לא בוצע'}</td>
+          <td>${items[i].text}</td>
+        </tr>`;
+
+        if (images[i] && images[i].length > 0) {
+          reportHTML += `<tr><td colspan="2"><div style="display:flex; flex-wrap:wrap; justify-content:center;">`;
+          images[i].forEach(img => {
+            reportHTML += `<img src="${img}" class="photo">`;
+          });
+          reportHTML += `</div></td></tr>`;
+        }
+      }
+
+      reportHTML += `</table></body></html>`;
+
+      const blob = new Blob([reportHTML], { type: 'text/html' });
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result.split(',')[1];
+        await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folderName, fileName: "report.html", fileData: base64 })
+        });
+
+        const shareResp = await fetch('/api/share-report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folderName })
+        });
+
+        const shareResult = await shareResp.json();
+        if (shareResp.ok) {
+          updateProgress("הושלם!", "#4caf50");
+          document.getElementById("progressOverlay").style.display = 'none';
+          document.getElementById("whatsappBtn").style.display = 'block';
+          document.getElementById("whatsappBtn").onclick = () => {
+            const text = `נוצר דוח חדש:\n${shareResult.link}`;
+            window.open(`https://api.whatsapp.com/send?phone=972549090028&text=${encodeURIComponent(text)}`, '_blank');
+          };
+        }
+      };
+      reader.readAsDataURL(blob);
+    });
+  </script>
+</body>
+</html>
