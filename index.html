@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>רשימת תיוג</title>
+    <style>
+        body { font-family: Arial, sans-serif; direction: rtl; margin: 20px; }
+        .progress-container { width: 100%; background: #ddd; border-radius: 5px; margin: 10px 0; }
+        .progress-bar { width: 0%; height: 20px; background: green; border-radius: 5px; text-align: center; color: white; }
+    </style>
+</head>
+<body>
+    <h1>רשימת תיוג</h1>
+    <p>תאריך מילוי: <span id="currentDate"></span></p>
+
+    <form id="checklistForm">
+        <label>שם עובד (אופציונלי): </label>
+        <input type="text" name="workerName"><br><br>
+
+        <label><input type="checkbox" name="section1"> סעיף ראשון</label><br><br>
+
+        <label><input type="checkbox" name="section2" id="section2Checkbox"> סעיף שני</label><br><br>
+
+        <label>העלה תמונה:</label>
+        <input type="file" id="imageUpload" name="imageUpload" multiple accept="image/*"><br><br>
+
+        <button type="submit">שלח טופס</button>
+    </form>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar">0%</div>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        document.getElementById("currentDate").innerText = new Date().toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
+
+        // כאשר המשתמש מעלה תמונה - סימון אוטומטי של סעיף שני
+        document.getElementById("imageUpload").addEventListener("change", function() {
+            if (this.files.length > 0) {
+                document.getElementById("section2Checkbox").checked = true;
+            }
+        });
+
+        document.getElementById("checklistForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            updateProgress(10);
+            
+            const formData = new FormData(document.getElementById("checklistForm"));
+            
+            const res = await fetch("/api/submit-form", {
+                method: "POST",
+                body: formData
+            });
+            
+            if (!res.ok) {
+                alert("שגיאה בשליחת הטופס לשרת");
+                return;
+            }
+
+            updateProgress(80);
+            const data = await res.json();
+            const sharedLink = data.sharedLink;
+            updateProgress(90);
+            
+            sendWhatsApp("972549090028", sharedLink);
+            updateProgress(100);
+            document.getElementById("result").innerText = "הטופס נשלח בהצלחה!";
+        });
+
+        function updateProgress(percent) {
+            document.getElementById("progressBar").style.width = percent + "%";
+            document.getElementById("progressBar").innerText = percent + "%";
+        }
+
+        function sendWhatsApp(phone, message) {
+            const encodedMessage = encodeURIComponent("נוצר דוח חדש: " + message);
+            const url = `https://wa.me/${phone}?text=${encodedMessage}`;
+            window.open(url, '_blank');
+        }
+    </script>
+</body>
+</html>
