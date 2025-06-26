@@ -137,9 +137,10 @@
 
     document.getElementById("checkForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].requireImage && (!uploadedFiles[i] || uploadedFiles[i].length === 0)) {
-          alert(`נדרש לצרף לפחות תמונה אחת עבור: ${items[i].text}`); return;
+ // פה בודקים אם יש תמונה אחת לפחות     
+//      for (let i = 0; i < items.length; i++) {
+//        if (items[i].requireImage && (!uploadedFiles[i] || uploadedFiles[i].length === 0)) {
+//         alert(`נדרש לצרף לפחות תמונה אחת עבור: ${items[i].text}`); return;
         }
       }
       showProgress("יוצר דוח...", 80);
