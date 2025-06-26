@@ -54,11 +54,14 @@ export default async function handler(req, res) {
 
       if (checkResp.ok) {
       if (checkResp.ok) {
-  // תיקיה קיימת – נשנה את שמה עם שעה ודקה
+  if (checkResp.ok) {
+  // תיקיה קיימת – נשנה את שמה במקום למחוק
   const now = new Date();
   const hh = now.getHours().toString().padStart(2, '0');
   const mm = now.getMinutes().toString().padStart(2, '0');
-  const newPath = `/forms/${folderName}_${hh}-${mm}`;
+  const timestamp = `${hh}-${mm}`;
+  const newFolderName = `${folderName}_${timestamp}`;
+  const newPath = `/forms/${newFolderName}`;
 
   const moveResp = await fetch("https://api.dropboxapi.com/2/files/move_v2", {
     method: "POST",
@@ -69,16 +72,20 @@ export default async function handler(req, res) {
     body: JSON.stringify({
       from_path: basePath,
       to_path: newPath,
+      allow_ownership_transfer: false,
       autorename: true
     })
   });
 
   if (!moveResp.ok) {
     const error = await moveResp.text();
-    console.error("Failed to rename existing folder:", error);
-    return res.status(500).json({ error: "Failed to rename existing folder" });
+    console.error("שגיאה בשינוי שם התיקיה:", error);
+    return res.status(500).json({ error: "שגיאה בשינוי שם התיקיה" });
   }
+
+  console.log("התיקיה הועברה ל:", newPath);
 }
+
 
       // צור תיקיה חדשה
       await fetch("https://api.dropboxapi.com/2/files/create_folder_v2", {
