@@ -136,12 +136,13 @@
     }
     document.getElementById("checkForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-  
+  /*
       for (let i = 0; i < items.length; i++) {
       if (items[i].requireImage && (!uploadedFiles[i] || uploadedFiles[i].length === 0)) {
        alert(`נדרש לצרף לפחות תמונה אחת עבור: ${items[i].text}`); return;
         }
       }
+      */
       showProgress("יוצר דוח...", 80);
       const sections = items.map((item, idx) => ({ text: item.text, done: document.getElementById(`item${idx}`).checked, images: uploadedFiles[idx] || [] }));
       const reportRes = await fetch('/api/create-report', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ folderName, employeeName: document.getElementById("employeeName").value, sections }) });
